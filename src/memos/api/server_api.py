@@ -8,6 +8,7 @@ from starlette.staticfiles import StaticFiles
 
 from memos.api.exceptions import APIExceptionHandler
 from memos.api.middleware.request_context import RequestContextMiddleware
+from memos.api.middleware.shared_key_auth import SharedKeyAuthMiddleware
 from memos.api.routers.server_router import router as server_router
 from memos.plugins.manager import plugin_manager
 
@@ -31,9 +32,16 @@ app = FastAPI(
     version="1.0.1",
 )
 
-app.mount("/download", StaticFiles(directory=os.getenv("FILE_LOCAL_PATH")), name="static_mapping")
+_download_path = os.getenv("FILE_LOCAL_PATH")
+if _download_path and os.path.isdir(_download_path):
+    app.mount("/download", StaticFiles(directory=_download_path), name="static_mapping")
+else:
+    logger.info("[SERVER_API] /download mount skipped (FILE_LOCAL_PATH unset or missing)")
 
 app.add_middleware(RequestContextMiddleware, source="server_api")
+# Added last so it wraps outermost and rejects unauthorized requests before
+# any other middleware or router work. No-op unless MEMOS_SHARED_KEY is set.
+app.add_middleware(SharedKeyAuthMiddleware)
 # Include routers
 app.include_router(server_router)
 

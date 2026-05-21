@@ -99,6 +99,14 @@ class FileContentParser(BaseMessageParser):
 
     def _handle_url(self, url_str: str, filename: str) -> tuple[str, str | None, bool]:
         """Download and parse file from URL."""
+        # mwmdeadpool fork: gate remote URL fetching behind explicit opt-in
+        # to mitigate SSRF risk (red-team High 2, 2026-05-20). Default off.
+        if os.getenv("MEMOS_ALLOW_URL_FETCH", "false").lower() != "true":
+            logger.warning(
+                "[FileContentParser] URL fetch blocked: %s (set MEMOS_ALLOW_URL_FETCH=true to enable)",
+                url_str,
+            )
+            return f"[URL fetch disabled: {url_str}]", None, False
         try:
             from urllib.parse import urlparse
 

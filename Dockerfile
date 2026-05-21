@@ -29,7 +29,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-ENV HF_ENDPOINT=https://hf-mirror.com
+ENV HF_ENDPOINT=https://huggingface.co
+ENV NACOS_ENABLE_WATCH=false
 ENV PYTHONPATH=/app/src
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
