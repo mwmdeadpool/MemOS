@@ -7,8 +7,10 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_ROLES = {"user", "assistant", "system"}
 
@@ -160,6 +162,40 @@ class TextualMemoryMetadata(BaseModel):
     )
 
     model_config = ConfigDict(extra="allow")
+
+    @field_validator("info", "internal_info", mode="before")
+    @classmethod
+    def _coerce_json_dict_field(
+        cls, v: Any, validation_info: ValidationInfo
+    ) -> dict[str, Any] | None:
+        if v is None or isinstance(v, dict):
+            return v
+        if isinstance(v, (bytes, bytearray)):
+            try:
+                v = v.decode("utf-8")
+            except UnicodeDecodeError:
+                logger.warning(
+                    "Invalid UTF-8 bytes in metadata.%s; coercing to None.",
+                    validation_info.field_name,
+                )
+                return None
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return None
+            if not s.startswith("{"):
+                return None
+            try:
+                parsed = json.loads(s)
+            except json.JSONDecodeError:
+                logger.warning(
+                    "Unparseable JSON in metadata.%s; coercing to None.",
+                    validation_info.field_name,
+                )
+                return None
+            if isinstance(parsed, dict):
+                return parsed
+        return None
 
     covered_history: Any | None = Field(
         default=None,
