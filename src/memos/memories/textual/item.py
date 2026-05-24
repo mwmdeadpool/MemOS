@@ -170,7 +170,7 @@ class TextualMemoryMetadata(BaseModel):
     ) -> dict[str, Any] | None:
         if v is None or isinstance(v, dict):
             return v
-        if isinstance(v, (bytes, bytearray)):
+        if isinstance(v, bytes | bytearray):
             try:
                 v = v.decode("utf-8")
             except UnicodeDecodeError:
